@@ -1,0 +1,77 @@
+-------------------------------------------------------
+制作uboot启动内核文件： kernel.bin
+-------------------------------------------------------
+
+--使用说明：
+用mkimage工具制作FIT uImage内核文件。
+将linux内核、devicetree、rootfs.cpio根文件系统3个文件制作为uboot启动文件。
+
+
+步骤1： 用新文件替换对应的旧文件；
+    Image.gz                    linux内核(gzip压缩格式)
+	system.dtb                  设备树（二进制格式）
+	rootfs.cpio.gz              根文件系统(gzip压缩格式)
+
+步骤2： 
+    ubuntu(linux)环境运行： 
+	      ./kernel.sh
+	
+
+
+-- 过程说明：
+1. 调用mkimage工具;
+2. mkimage工具从配置文件kernel.its中读取信息（输入文件等);
+3. 生成uboot启动内核文件kernel.bin;
+
+
+--------------------------------------------------------
+-- 记录
+--------------------------------------------------------
+kernel20190707.bin         zynq7020的移植工程（朱亚凡）
+
+kernel20190815.bin         zynq7020的移植工程（陈钗修正）
+
+kernel20190905.bin         
+    kernel:  
+	    1. 增加usb虚拟串口显示;
+	devicetree:
+	    1. 增加usb虚拟串口显示;
+	drivers:
+	    1. 重新编译jimu_mem驱动，并安装到rootfs中。
+
+
+kernel20190912.bin         
+    kernel:  
+	    1. 增加usb虚拟串口显示;
+	devicetree:
+	    1.  
+	rootfs:
+	    1. 重新编译jimu_mem驱动，并安装到rootfs中。
+		
+		
+kernel20190918.bin         
+    kernel:  
+	    1.  
+	devicetree:
+	    1.  重新产生设备树(vivado重新配置了DDR频率)
+	rootfs:
+	    1.  
+		
+		
+kernel20190923.bin  (*.sdk2; sensor入口模拟1280*720的图像数据)
+    kernel:  
+	    1.  
+	devicetree:
+	    1.  重新产生设备树(vivado重新配置了DDR频率)
+	rootfs:
+	    1.  
+
+
+-- 朱浪接手的项目 --
+kernel20200722.bin 
+	1. 朱浪的工程， 重新生成devicetree
+
+
+
+
+

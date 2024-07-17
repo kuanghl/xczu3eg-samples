@@ -1,0 +1,3 @@
+uenvcmd=echo Copying Linux from SD card to RAM && \
+fatload mmc 0  0x1000000  kernel.bin; \
+bootm    0x1000000;

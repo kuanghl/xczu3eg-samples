@@ -1,0 +1,110 @@
+From 1e1a82d5a1135b8ea3a902fc210d391b18fb2224 Mon Sep 17 00:00:00 2001
+From: Manish Narani <manish.narani@xilinx.com>
+Date: Sat, 16 Mar 2019 12:25:18 +0530
+Subject: [EMBEDDEDSW PATCH] sw_apps: zynqmp_fsbl: Fix for Boot Issues with new
+ DIMM in 2018.3 FSBL
+
+This patch fixes the below two issues:
+1. The ZCU102 with new DIMM installed has failures on Boot frequently
+2. The DDR-PHY training is executed on warm restart even when DDR is
+in self-refresh.
+
+Signed-off-by: Manish Narani <manish.narani@xilinx.com>
+---
+ lib/sw_apps/zynqmp_fsbl/src/xfsbl_ddr_init.c | 29 ++++++++++++++++++++++++++--
+ lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.c    |  4 ++++
+ lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.h    |  2 ++
+ 3 files changed, 33 insertions(+), 2 deletions(-)
+
+diff --git a/lib/sw_apps/zynqmp_fsbl/src/xfsbl_ddr_init.c b/lib/sw_apps/zynqmp_fsbl/src/xfsbl_ddr_init.c
+index a602cc3..09c5ccd 100644
+--- a/lib/sw_apps/zynqmp_fsbl/src/xfsbl_ddr_init.c
++++ b/lib/sw_apps/zynqmp_fsbl/src/xfsbl_ddr_init.c
+@@ -1280,6 +1280,9 @@ u32 XFsbl_DdrInit(void)
+ 	u32 Index;
+ 	u32 Status;
+ 	u8 NewDimmId[] = "4ATF51264HZ-2G6E1   ";
++#ifdef XFSBL_ENABLE_DDR_SR
++	u32 RegVal;
++#endif
+ 
+ 	/* Define and Initialize the DDR Initialization data */
+ 	struct DdrcInitData DdrData = {
+@@ -1302,6 +1305,18 @@ u32 XFsbl_DdrInit(void)
+ 	 */
+ 	Status = memcmp(DdrData.SpdData, NewDimmId, sizeof(DdrData.SpdData));
+ 	if (Status != 0U) {
++#ifdef XFSBL_ENABLE_DDR_SR
++		/* Check if DDR is in self refresh mode */
++		RegVal = Xil_In32(XFSBL_DDR_STATUS_REGISTER_OFFSET) &
++			DDR_STATUS_FLAG_MASK;
++		if (!RegVal) {
++			/* Execute the Training Sequence */
++			(void)psu_ddr_phybringup_data();
++		}
++#else
++		/* Execute the Training Sequence */
++		(void)psu_ddr_phybringup_data();
++#endif
+ 		return XFSBL_SUCCESS;
+ 	}
+ 
+@@ -1324,8 +1339,18 @@ u32 XFsbl_DdrInit(void)
+ 	/* Calculate and Write all the registers of DDR-PHY Controller */
+ 	XFsbl_PhyRegsInit(&DdrData);
+ 
+-	/* Execute the Training Sequence */
+-	(void)psu_ddr_phybringup_data();
++#ifdef XFSBL_ENABLE_DDR_SR
++		/* Check if DDR is in self refresh mode */
++		RegVal = Xil_In32(XFSBL_DDR_STATUS_REGISTER_OFFSET) &
++			DDR_STATUS_FLAG_MASK;
++		if (!RegVal) {
++			/* Execute the Training Sequence */
++			(void)psu_ddr_phybringup_data();
++		}
++#else
++		/* Execute the Training Sequence */
++		(void)psu_ddr_phybringup_data();
++#endif
+ 
+ 	return XFSBL_SUCCESS;
+ }
+diff --git a/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.c b/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.c
+index b3cb159..aef0dc7 100644
+--- a/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.c
++++ b/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.c
+@@ -141,6 +141,9 @@ u32 XFsbl_HookPsuInit(void)
+ 
+ 	/* Add the code here */
+ 
++#if defined(XPS_BOARD_ZCU102) || defined(XPS_BOARD_ZCU106)
++	Status = (u32)psu_init_ddr_self_refresh();
++#else
+ #ifdef XFSBL_ENABLE_DDR_SR
+ 	/* Check if DDR is in self refresh mode */
+ 	RegVal = Xil_In32(XFSBL_DDR_STATUS_REGISTER_OFFSET) &
+@@ -153,6 +156,7 @@ u32 XFsbl_HookPsuInit(void)
+ #else
+ 	Status = (u32)psu_init();
+ #endif
++#endif
+ 
+ 	if (XFSBL_SUCCESS != Status) {
+ 			XFsbl_Printf(DEBUG_GENERAL,"XFSBL_PSU_INIT_FAILED\n\r");
+diff --git a/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.h b/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.h
+index 0e3758c..68b3f12 100644
+--- a/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.h
++++ b/lib/sw_apps/zynqmp_fsbl/src/xfsbl_hooks.h
+@@ -78,6 +78,8 @@ u32 XFsbl_HookPsuInit(void);
+ 
+ u32 XFsbl_HookGetPosBootType(void);
+ 
++int psu_init_ddr_self_refresh(void);
++
+ #ifdef __cplusplus
+ }
+ #endif
+-- 
+2.1.1
+

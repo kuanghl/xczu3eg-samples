@@ -1,0 +1,5 @@
+uenvcmd=echo Copying Linux from TFTP to RAM && \
+env set serverip 192.168.0.4; \
+dhcp; \
+tftpboot 0x10000000  kernel20190923.bin; \
+bootm    0x10000000;
